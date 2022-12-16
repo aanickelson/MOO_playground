@@ -18,15 +18,19 @@ class RoverWrapper(ElementwiseProblem):
         self.l1_size = self.st_size * self.hid
         self.l2_size = self.hid * self.act_size
         self.model = NN(self.env.state_size(), self.env.p.hid, self.env.get_action_size())
-        super().__init__(n_var=self.l1_size + self.l2_size, n_obj=2, n_ieq_constr=0, xl=0, xu=1)
-
+        self.last_two_0 = [0, 0]
+        self.last_two_1 = [0, 0]
+        super().__init__(n_var=self.l1_size + self.l2_size, n_obj=2, n_ieq_constr=0, xl=-5, xu=5)
 
     def _evaluate(self, x, out, *args, **kwargs):
+        self.env.reset()
         l1_wts = from_numpy(np.reshape(x[:self.l1_size], (self.hid, self.st_size)))
         l2_wts = from_numpy(np.reshape(x[self.l1_size:], (self.act_size, self.hid)))
         self.model.set_weights([l1_wts, l2_wts])
         self.env.run_sim([self.model])
         out["F"] = -self.env.multiG()
+        self.last_two_0 = self.last_two_1.copy()
+        self.last_two_1 = x[:2]
 
 
 if __name__ == '__main__':
@@ -35,11 +39,10 @@ if __name__ == '__main__':
     l1_size = env.state_size() * p.hid
     l2_size = p.hid * env.get_action_size()
 
-    wts = NN(env.state_size(), p.hid, env.get_action_size()).get_weights()
-    wts_npy = [wt.detach().numpy() for wt in wts]
     algorithm = NSGA2(pop_size=200)
     res = minimize(problem, algorithm, ('n_gen', 200))
     print(res.F)
+    print(problem.last_two_0, problem.last_two_1)
     plot = Scatter()
     plot.add(problem.pareto_front(), plot_type="line", color="black", alpha=0.7)
     plot.add(-res.F, facecolor="none", edgecolor="red")
