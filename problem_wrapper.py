@@ -7,7 +7,7 @@ from pymoo.optimize import minimize
 from pymoo.visualization.scatter import Scatter
 from torch import from_numpy
 
-from parameters00 import Parameters as p
+from parameters010 import Parameters as p
 
 
 class RoverWrapper(ElementwiseProblem):
@@ -31,21 +31,22 @@ class RoverWrapper(ElementwiseProblem):
         self.model.set_weights([l1_wts, l2_wts])
         self.env.run_sim([self.model])
         out["F"] = -self.env.multiG()
+        # print(out['F'])
         self.last_two_0 = self.last_two_1.copy()
         self.last_two_1 = x[:2]
         self.gen += 1
         if not self.gen % 200:
             print(self.gen / 200)
-            print(self.last_two_1, self.last_two_0)
+        #     print(self.last_two_1, self.last_two_0)
 
 
 if __name__ == '__main__':
     env = DiscreteRoverDomain(p)
     problem = RoverWrapper(env)
     algorithm = NSGA2(pop_size=200)
-    res = minimize(problem, algorithm, ('n_gen', 50))
+    res = minimize(problem, algorithm, ('n_gen', 200))
     print(-res.F)
-    print(problem.last_two_0, problem.last_two_1)
+    # print(problem.last_two_0, problem.last_two_1)
     plot = Scatter()
     plot.add(problem.pareto_front(), plot_type="line", color="black", alpha=0.7)
     plot.add(-res.F, facecolor="none", edgecolor="red")
