@@ -16,18 +16,30 @@ from qdax.core.emitters.standard_emitters import MixingEmitter
 from qdax.utils.plotting import plot_2d_map_elites_repertoire, plot_mome_pareto_fronts
 
 from qdax.utils.metrics import default_moqd_metrics
-
+from MOO_playground.problem_wrapper import RoverWrapper
+import numpy as np
 import matplotlib.pyplot as plt
 
 from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores
+from teaming.domain import DiscreteRoverDomain
+from MOO_playground.learning.neuralnet_no_hid import NeuralNetwork as NN
+from torch import from_numpy
+from parameters04 import Parameters as p
 
-areto_front_max_length = 50  # @param {type:"integer"}
-num_variables = 100  # @param {type:"integer"}
+env = DiscreteRoverDomain(p)
+st_size = env.state_size()
+act_size = env.get_action_size()
+l1_size = st_size * act_size
+hid = 0
+model = NN(st_size, hid, act_size)
+
+pareto_front_max_length = 50  # @param {type:"integer"}
+num_variables = l1_size  # @param {type:"integer"}
 num_iterations = 1000  # @param {type:"integer"}
 
 num_centroids = 64  # @param {type:"integer"}
-minval = -2  # @param {type:"number"}
-maxval = 4  # @param {type:"number"}
+minval = 0  # @param {type:"number"}
+maxval = 1  # @param {type:"number"}
 proportion_to_mutate = 0.6  # @param {type:"number"}
 eta = 1  # @param {type:"number"}
 proportion_var_to_change = 0.5  # @param {type:"number"}
@@ -35,38 +47,29 @@ crossover_percentage = 1.  # @param {type:"number"}
 batch_size = 100  # @param {type:"integer"}
 lag = 2.2  # @param {type:"number"}
 base_lag = 0  # @param {type:"number"}
-pareto_front_max_length = 1000
 
 
-def rastrigin_scorer(
-    genotypes: jnp.ndarray, base_lag: float, lag: float
-) -> Tuple[Fitness, Descriptor]:
+
+def rastrigin_scorer(genotypes: jnp.ndarray, l1, act, st, nn_model, rov_env) -> Tuple[Fitness, Descriptor]:
     """
     Rastrigin Scorer with first two dimensions as descriptors
     """
     descriptors = genotypes[:, :2]
-    f1 = -(
-        10 * genotypes.shape[1]
-        + jnp.sum(
-            (genotypes - base_lag) ** 2
-            - 10 * jnp.cos(2 * jnp.pi * (genotypes - base_lag)),
-            axis=1,
-        )
-    )
+    scores = []
+    for i in range(genotypes.shape[0]):
+        l1_wts = genotypes[i]
+        l1_max = l1_wts.argmax()
+        l1_wts = from_numpy(np.reshape(np.array(genotypes[i]), (act, st)))
+        nn_model.set_weights([l1_wts])
+        rov_env.run_sim([nn_model])
+        multi_g = rov_env.multiG()
 
-    f2 = -(
-        10 * genotypes.shape[1]
-        + jnp.sum(
-            (genotypes - lag) ** 2 - 10 * jnp.cos(2 * jnp.pi * (genotypes - lag)),
-            axis=1,
-        )
-    )
-    scores = jnp.stack([f1, f2], axis=-1)
+    # scores = jnp.stack([f1, f2], axis=-1)
 
     return scores, descriptors
 
 
-scoring_function = partial(rastrigin_scorer, base_lag=base_lag, lag=lag)
+scoring_function = partial(rastrigin_scorer, l1=l1_size, act=act_size, st=st_size, nn_model=model, rov_env=env)
 
 
 def scoring_fn(genotypes: jnp.ndarray, random_key: RNGKey) -> Tuple[Fitness, Descriptor, ExtraScores, RNGKey]:

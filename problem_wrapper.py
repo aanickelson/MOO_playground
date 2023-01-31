@@ -35,8 +35,8 @@ class RoverWrapper(ElementwiseProblem):
         self.last_two_0 = self.last_two_1.copy()
         self.last_two_1 = x[:2]
         self.gen += 1
-        if not self.gen % 200:
-            print(self.gen / 200)
+        # if not self.gen % 200:
+        #     print(self.gen / 200)
         #     print(self.last_two_1, self.last_two_0)
 
 
