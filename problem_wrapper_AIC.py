@@ -1,16 +1,20 @@
 import numpy as np
 from pymoo.core.problem import ElementwiseProblem
-from pymoo.algorithms.moo.nsga2 import NSGA2
+from MOO_playground.NSGAII_wrapper import NSGAIIWrap as NSGA2
 from pymoo.optimize import minimize
 from pymoo.visualization.scatter import Scatter
 from torch import from_numpy
-
+import os
+from copy import deepcopy
 from AIC.aic import aic
 from pymap_elites_multiobjective.parameters import p010, p349
 from pymap_elites_multiobjective.scripts_data.run_env import run_env
 from evo_playground.learning.neuralnet import NeuralNetwork as NN
 from parameters02 import Parameters as p
 from pymap_elites_multiobjective.parameters.learningparams01 import LearnParams as lp
+import datetime
+import time
+import multiprocessing
 
 
 class RoverWrapper(ElementwiseProblem):
@@ -24,6 +28,7 @@ class RoverWrapper(ElementwiseProblem):
         self.model = NN(self.st_size, self.hid, self.act_size)
         self.last_two_0 = [0, 0]
         self.last_two_1 = [0, 0]
+        self.n_eval = 0
         self.gen = 0
         super().__init__(n_var=self.l1_size+self.l2_size, n_obj=2, n_ieq_constr=0, xl=-5, xu=5)
 
@@ -38,24 +43,88 @@ class RoverWrapper(ElementwiseProblem):
         # print(out['F'])
         self.last_two_0 = self.last_two_1.copy()
         self.last_two_1 = x[:2]
-        self.gen += 1
-        if not self.gen % 1000:
-            print(self.gen / 100)
-            print(G)
+        self.n_eval += 1
+        if not self.n_eval % 100:
+            self.gen = int(self.n_eval / 100)
+
+
+def get_unique_fname(rootdir, date_time=None):
+    greatest = 0
+    # Walk through all the files in the given directory
+    for sub, dirs, files in os.walk(rootdir):
+        for d in dirs:
+            pos = 3
+            from re import split
+            splitstr = split('_|/', d)
+            try:
+                int_str = int(splitstr[-pos])
+            except (ValueError, IndexError):
+                continue
+
+            if int_str > greatest:
+                greatest = int_str
+        break
+
+    return os.path.join(rootdir, f'{greatest + 1:03d}{date_time}')
+
+
+def main(run_info):
+    par, fpath, stat = run_info
+    env = aic(par)
+    problem = RoverWrapper(env)
+    algorithm = NSGA2(fpath, pop_size=100)
+    start = time.time()
+    res = minimize(problem, algorithm, ('n_gen', 2000))
+    tot_time = time.time() - start
+    with open(filepath + '_time.txt', 'w') as f:
+        f.write(str(tot_time))
+    print(par, stat, tot_time, '\n', -res.F)
+
+
+def multiprocess_main(batch_for_multi):
+    cpus = multiprocessing.cpu_count() - 1
+    with multiprocessing.Pool(processes=cpus) as pool:
+        pool.map(main, batch_for_multi)
 
 
 if __name__ == '__main__':
-    p_num = p010
-    env = aic(p_num)
-    problem = RoverWrapper(env)
-    algorithm = NSGA2(pop_size=100)
-    res = minimize(problem, algorithm, ('n_gen', 2000))
-    print(-res.F)
+
+    param_batch = [p010, p349]
+    now = datetime.datetime.now()
+    base_path = os.path.join(os.getcwd(), 'data')
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    now_str = now.strftime("_%Y%m%d_%H%M%S")
+    dirpath = get_unique_fname(base_path, now_str)
+    # dirpath = path.join(getcwd(), now_str)
+    os.mkdir(dirpath)
+
+    batch = []
+    for params in param_batch:  # , p04]:
+        p = deepcopy(params)
+        p.n_agents = 1
+        lp.n_stat_runs = 10
+        for i in range(lp.n_stat_runs):
+            filepath = os.path.join(dirpath, f'{p.param_idx:03d}_run{i}')
+            os.mkdir(filepath)
+            batch.append([p, filepath, i])
+
+    # Use this one
+    # multiprocess_main(batch)
+
+    # This runs a single experiment / setup at a time for debugging
+    main(batch[0])
+
+    # for b in batch:
+    #     main(b)
+
+
     # NN weights are stored in res.X
     # print(res.X)
     # print(problem.last_two_0, problem.last_two_1)
 
-    plot = Scatter()
-    plot.add(problem.pareto_front(), plot_type="line", color="black", alpha=0.7)
-    plot.add(-res.F, facecolor="none", edgecolor="red")
-    plot.show()
+    # plot = Scatter()
+    # plot.add(problem.pareto_front(), plot_type="line", color="black", alpha=0.7)
+    # plot.add(-res.F, facecolor="none", edgecolor="red")
+    # plot.show()
