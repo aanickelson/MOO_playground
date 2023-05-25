@@ -7,7 +7,7 @@ from torch import from_numpy
 import os
 from copy import deepcopy
 from AIC.aic import aic
-from pymap_elites_multiobjective.parameters import p010, p349
+import pymap_elites_multiobjective.parameters as Params
 from pymap_elites_multiobjective.scripts_data.run_env import run_env
 from evo_playground.learning.neuralnet import NeuralNetwork as NN
 from parameters02 import Parameters as p
@@ -70,26 +70,28 @@ def get_unique_fname(rootdir, date_time=None):
 
 def main(run_info):
     par, fpath, stat = run_info
+    np.random.seed(stat + np.random.randint(0, 10000))
+    print(f'running {fpath}')
     env = aic(par)
     problem = RoverWrapper(env)
     algorithm = NSGA2(fpath, pop_size=100)
     start = time.time()
     res = minimize(problem, algorithm, ('n_gen', 2000))
     tot_time = time.time() - start
-    with open(filepath + '_time.txt', 'w') as f:
+    with open(fpath + '_time.txt', 'w') as f:
         f.write(str(tot_time))
-    print(par, stat, tot_time, '\n', -res.F)
+    # print(stat, tot_time, '\n', -res.F)
 
 
 def multiprocess_main(batch_for_multi):
     cpus = multiprocessing.cpu_count() - 1
+    # cpus = 2
     with multiprocessing.Pool(processes=cpus) as pool:
         pool.map(main, batch_for_multi)
 
 
 if __name__ == '__main__':
 
-    param_batch = [p010, p349]
     now = datetime.datetime.now()
     base_path = os.path.join(os.getcwd(), 'data')
     if not os.path.exists(base_path):
@@ -101,8 +103,8 @@ if __name__ == '__main__':
     os.mkdir(dirpath)
 
     batch = []
-    for params in param_batch:  # , p04]:
-        p = deepcopy(params)
+    for param in [Params.p249]:  # , p04]:
+        p = deepcopy(param)
         p.n_agents = 1
         lp.n_stat_runs = 10
         for i in range(lp.n_stat_runs):
@@ -111,10 +113,10 @@ if __name__ == '__main__':
             batch.append([p, filepath, i])
 
     # Use this one
-    # multiprocess_main(batch)
+    multiprocess_main(batch)
 
     # This runs a single experiment / setup at a time for debugging
-    main(batch[0])
+    # main(batch[0])
 
     # for b in batch:
     #     main(b)

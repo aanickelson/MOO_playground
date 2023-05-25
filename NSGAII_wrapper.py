@@ -25,7 +25,7 @@ class NSGAIIWrap(NSGA2):
         # execute the survival to find the fittest solutions
         self.pop = self.survival.do(self.problem, pop, n_survive=self.pop_size, algorithm=self, **kwargs)
 
-        if not self.gen % 100 or self.gen==1999:
+        if not self.gen % 100 or self.gen == 1998:
             fits = np.array([-p.F for p in self.pop])
             np.savetxt(self.fpath + f'/fits{self.gen}.npy', fits)
 
