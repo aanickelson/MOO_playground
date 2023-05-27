@@ -103,7 +103,7 @@ if __name__ == '__main__':
     os.mkdir(dirpath)
 
     batch = []
-    for param in [Params.p249]:  # , p04]:
+    for param in [Params.p010, Params.p239, Params.p349]:  # , p04]:
         p = deepcopy(param)
         p.n_agents = 1
         lp.n_stat_runs = 10
