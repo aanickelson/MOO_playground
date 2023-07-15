@@ -6,7 +6,7 @@ Structure and main functions for basic
 """
 
 
-from evo_playground.learning.neuralnet import NeuralNetwork
+from evo_playground.support.neuralnet import NeuralNetwork
 import torch
 from os import path, getcwd
 import numpy as np

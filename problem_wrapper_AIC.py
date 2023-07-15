@@ -9,7 +9,7 @@ from copy import deepcopy
 from AIC.aic import aic
 import pymap_elites_multiobjective.parameters as Params
 from pymap_elites_multiobjective.scripts_data.run_env import run_env
-from evo_playground.learning.neuralnet import NeuralNetwork as NN
+from evo_playground.support.neuralnet import NeuralNetwork as NN
 from parameters02 import Parameters as p
 from pymap_elites_multiobjective.parameters.learningparams01 import LearnParams as lp
 import datetime
