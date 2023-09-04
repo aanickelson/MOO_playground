@@ -103,10 +103,11 @@ if __name__ == '__main__':
     os.mkdir(dirpath)
 
     batch = []
-    for param in [Params.p010, Params.p239, Params.p349]:  # , p04]:
+    for param in [Params.p100100, Params.p100109, Params.p110109, Params.p111109]:  # , p04]:
         p = deepcopy(param)
         p.n_agents = 1
         lp.n_stat_runs = 10
+        p.n_cf_evals = 1
         for i in range(lp.n_stat_runs):
             filepath = os.path.join(dirpath, f'{p.param_idx:03d}_run{i}')
             os.mkdir(filepath)
