@@ -5,17 +5,13 @@ from pymoo.optimize import minimize
 from pymoo.visualization.scatter import Scatter
 from torch import from_numpy
 import os
-from copy import deepcopy
 import mo_gymnasium as mo_gym
 from mo_gymnasium.utils import MORecordEpisodeStatistics
 
-
-import pymap_elites_multiobjective.parameters as Params
 from evo_playground.support.neuralnet import NeuralNetwork as NN
-from evo_playground.test_morl.sar_wrapper import SARWrap
+from pymap_elites_multiobjective.scripts_data.sar_wrapper import SARWrap
 from pymap_elites_multiobjective.parameters.learningparams01 import LearnParams as lp
 import datetime
-import time
 import multiprocessing
 
 
